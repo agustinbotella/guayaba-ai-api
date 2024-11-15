@@ -14,6 +14,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '22.x'
+
+      - name: Create SSH key
+        run: |
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
       
       - name: Copy repository contents via scp
         uses: appleboy/scp-action@master
@@ -23,6 +30,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "."
           target: "/var/www/guayaba-ai-api"
+          strip_components: 1
           
       - name: Execute deployment commands
         uses: appleboy/ssh-action@master
@@ -31,14 +39,11 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # Update Node.js to LTS
-            curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-            sudo apt-get install -y nodejs
-            
             cd /var/www/guayaba-ai-api
             
             # Load environment variables from GitHub Secrets
             echo "${{ secrets.ENV_FILE }}" > .env
             
-            npm install
-            pm2 restart guayaba-api</content>
+            # Install dependencies and restart PM2
+            npm ci --production
+            pm2 restart guayaba-api || pm2 start ecosystem.config.js
