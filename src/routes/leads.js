@@ -20,6 +20,7 @@ router.post('/', authenticateApiKey, async (req, res) => {
 
     res.status(201).json(lead);
   } catch (error) {
+    console.error('Error creating lead:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -42,11 +43,7 @@ router.get('/', authenticateApiKey, async (req, res) => {
       })
     };
 
-    // Get total amount for all leads
-    const total = await Lead.sum('amount', {
-      where: whereClause
-    }) || 0;
-
+    // Get paginated leads first
     const { count, rows: leads } = await Lead.findAndCountAll({
       where: whereClause,
       limit,
@@ -58,7 +55,6 @@ router.get('/', authenticateApiKey, async (req, res) => {
 
     res.json({
       leads,
-      total,
       pagination: {
         currentPage: page,
         totalPages,
@@ -69,6 +65,7 @@ router.get('/', authenticateApiKey, async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error fetching leads:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

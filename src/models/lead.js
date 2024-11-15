@@ -15,11 +15,6 @@ const Lead = sequelize.define('Lead', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  amount: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
-    defaultValue: 0,
-  },
   userId: {
     type: DataTypes.UUID,
     allowNull: false,
@@ -28,6 +23,8 @@ const Lead = sequelize.define('Lead', {
       key: 'id'
     }
   },
+}, {
+  timestamps: true
 });
 
 module.exports = Lead;
