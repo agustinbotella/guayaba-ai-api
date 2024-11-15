@@ -15,12 +15,12 @@ jobs:
         with:
           node-version: '22.x'
 
-      - name: Create SSH key
-        run: |
-          mkdir -p ~/.ssh/
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+          if_key_exists: replace
       
       - name: Copy repository contents via scp
         uses: appleboy/scp-action@master
@@ -40,10 +40,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /var/www/guayaba-ai-api
-            
-            # Load environment variables from GitHub Secrets
             echo "${{ secrets.ENV_FILE }}" > .env
-            
-            # Install dependencies and restart PM2
             npm ci --production
             pm2 restart guayaba-api || pm2 start ecosystem.config.js
