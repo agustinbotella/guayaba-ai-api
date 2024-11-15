@@ -10,6 +10,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+      
       - name: Copy repository contents via scp
         uses: appleboy/scp-action@master
         with:
@@ -26,6 +31,10 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            # Update Node.js to LTS
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+            
             cd /var/www/guayaba-ai-api
             npm install
             pm2 restart guayaba-api
