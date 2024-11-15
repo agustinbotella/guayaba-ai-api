@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { Op } = require('sequelize');
 const { authenticateApiKey } = require('../middleware/auth');
 const Lead = require('../models/lead');
 
@@ -25,10 +26,48 @@ router.post('/', authenticateApiKey, async (req, res) => {
 
 router.get('/', authenticateApiKey, async (req, res) => {
   try {
-    const leads = await Lead.findAll({
-      where: { userId: req.user.id }
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    
+    const offset = (page - 1) * limit;
+    
+    const whereClause = {
+      userId: req.user.id,
+      ...(search && {
+        [Op.or]: [
+          { name: { [Op.iLike]: `%${search}%` } },
+          { phoneNumber: { [Op.iLike]: `%${search}%` } }
+        ]
+      })
+    };
+
+    // Get total amount for all leads
+    const total = await Lead.sum('amount', {
+      where: whereClause
+    }) || 0;
+
+    const { count, rows: leads } = await Lead.findAndCountAll({
+      where: whereClause,
+      limit,
+      offset,
+      order: [['createdAt', 'DESC']]
     });
-    res.json(leads);
+
+    const totalPages = Math.ceil(count / limit);
+
+    res.json({
+      leads,
+      total,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: count,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
